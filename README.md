@@ -1,6 +1,6 @@
 # Reusable Workflows for YT-Soft Organization
 
-This repository contains centralized GitHub Actions reusable workflows for the `yt-soft` organization. Use these workflows to maintain consistency, reduce duplication, and centralize CI/CD management across all projects.
+This repository contains centralized GitHub Actions reusable workflows for the `soft-yt` organization. Use these workflows to maintain consistency, reduce duplication, and centralize CI/CD management across all projects.
 
 ## 🚀 Available Workflows
 
@@ -20,7 +20,7 @@ Comprehensive CI for Go projects with testing, linting, and coverage checks.
 ```yaml
 jobs:
   backend:
-    uses: yt-soft/reusable-workflows/.github/workflows/go-ci.yaml@main
+    uses: soft-yt/reusable-workflows/.github/workflows/go-ci.yaml@main
     with:
       go-version: '1.24'                 # Optional, default: 1.24
       working-directory: '.'             # Optional, default: .
@@ -51,7 +51,7 @@ CI for React/TypeScript frontend projects.
 ```yaml
 jobs:
   frontend:
-    uses: yt-soft/reusable-workflows/.github/workflows/frontend-ci.yaml@main
+    uses: soft-yt/reusable-workflows/.github/workflows/frontend-ci.yaml@main
     with:
       node-version: '20'                 # Optional, default: 20
       working-directory: 'frontend'      # Optional, default: frontend
@@ -82,7 +82,7 @@ Comprehensive security scanning for Go projects and Docker images.
 ```yaml
 jobs:
   security:
-    uses: yt-soft/reusable-workflows/.github/workflows/security-scan.yaml@main
+    uses: soft-yt/reusable-workflows/.github/workflows/security-scan.yaml@main
     with:
       go-version: '1.24'                 # Optional, default: 1.24
       scan-go: true                      # Optional, default: true
@@ -115,7 +115,7 @@ Universal Docker build and push to container registry.
 ```yaml
 jobs:
   build:
-    uses: yt-soft/reusable-workflows/.github/workflows/docker-build.yaml@main
+    uses: soft-yt/reusable-workflows/.github/workflows/docker-build.yaml@main
     with:
       registry: ghcr.io                  # Optional, default: ghcr.io
       platforms: linux/amd64,linux/arm64 # Optional
@@ -153,7 +153,7 @@ Aggregates CI results and enforces quality standards.
 jobs:
   quality-gate:
     needs: [backend, frontend, security]
-    uses: yt-soft/reusable-workflows/.github/workflows/quality-gate.yaml@main
+    uses: soft-yt/reusable-workflows/.github/workflows/quality-gate.yaml@main
     with:
       backend-result: ${{ needs.backend.result }}
       frontend-result: ${{ needs.frontend.result }}
@@ -190,27 +190,27 @@ permissions:
 
 jobs:
   backend:
-    uses: yt-soft/reusable-workflows/.github/workflows/go-ci.yaml@main
+    uses: soft-yt/reusable-workflows/.github/workflows/go-ci.yaml@main
     with:
       go-version: '1.24'
       run-integration-tests: true
       coverage-threshold: 70
 
   frontend:
-    uses: yt-soft/reusable-workflows/.github/workflows/frontend-ci.yaml@main
+    uses: soft-yt/reusable-workflows/.github/workflows/frontend-ci.yaml@main
     with:
       node-version: '20'
       working-directory: 'frontend'
 
   security:
-    uses: yt-soft/reusable-workflows/.github/workflows/security-scan.yaml@main
+    uses: soft-yt/reusable-workflows/.github/workflows/security-scan.yaml@main
     with:
       scan-go: true
 
   quality-gate:
     needs: [backend, frontend, security]
     if: always()
-    uses: yt-soft/reusable-workflows/.github/workflows/quality-gate.yaml@main
+    uses: soft-yt/reusable-workflows/.github/workflows/quality-gate.yaml@main
     with:
       backend-result: ${{ needs.backend.result }}
       frontend-result: ${{ needs.frontend.result }}
@@ -232,7 +232,7 @@ permissions:
 
 jobs:
   build:
-    uses: yt-soft/reusable-workflows/.github/workflows/docker-build.yaml@main
+    uses: soft-yt/reusable-workflows/.github/workflows/docker-build.yaml@main
     with:
       platforms: linux/amd64,linux/arm64
 ```
@@ -279,7 +279,7 @@ git push origin v1.2.0
 
 Services can pin to specific versions:
 ```yaml
-uses: yt-soft/reusable-workflows/.github/workflows/go-ci.yaml@v1.2.0
+uses: soft-yt/reusable-workflows/.github/workflows/go-ci.yaml@v1.2.0
 ```
 
 ---
@@ -297,7 +297,7 @@ All services created via Backstage Software Templates automatically use these re
 
 ## 📊 Monitoring
 
-- **GitHub Actions**: https://github.com/yt-soft/reusable-workflows/actions
+- **GitHub Actions**: https://github.com/soft-yt/reusable-workflows/actions
 - **ArgoCD**: https://argo.dev.tulupov.org/applications
 - **Grafana**: https://grafana.dev.tulupov.org/
 
