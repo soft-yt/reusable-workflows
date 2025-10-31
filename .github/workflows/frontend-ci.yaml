@@ -1,0 +1,112 @@
+name: Frontend CI (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: 'Node.js version to use'
+        required: false
+        type: string
+        default: '20'
+      working-directory:
+        description: 'Working directory for frontend'
+        required: false
+        type: string
+        default: 'frontend'
+      package-manager:
+        description: 'Package manager to use (npm, yarn, pnpm)'
+        required: false
+        type: string
+        default: 'npm'
+      run-type-check:
+        description: 'Run TypeScript type checking'
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: ${{ inputs.package-manager }}
+          cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+
+      - name: Install dependencies (npm)
+        if: inputs.package-manager == 'npm'
+        run: npm ci
+
+      - name: Install dependencies (yarn)
+        if: inputs.package-manager == 'yarn'
+        run: yarn install --frozen-lockfile
+
+      - name: Install dependencies (pnpm)
+        if: inputs.package-manager == 'pnpm'
+        run: pnpm install --frozen-lockfile
+
+      - name: Run linter
+        run: ${{ inputs.package-manager }} run lint
+
+      - name: Type check
+        if: ${{ inputs.run-type-check }}
+        run: ${{ inputs.package-manager }} run type-check || true
+
+      - name: Run tests
+        run: ${{ inputs.package-manager }} test -- --coverage --watchAll=false
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: ${{ inputs.working-directory }}/coverage/coverage-final.json
+          flags: frontend
+        continue-on-error: true
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: test
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: ${{ inputs.package-manager }}
+          cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          if [ "${{ inputs.package-manager }}" = "npm" ]; then
+            npm ci
+          elif [ "${{ inputs.package-manager }}" = "yarn" ]; then
+            yarn install --frozen-lockfile
+          else
+            pnpm install --frozen-lockfile
+          fi
+
+      - name: Build frontend
+        run: ${{ inputs.package-manager }} run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: ${{ inputs.working-directory }}/build/
+          retention-days: 7

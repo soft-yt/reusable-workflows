@@ -1,0 +1,127 @@
+name: Quality Gate (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      backend-result:
+        description: 'Backend CI result'
+        required: true
+        type: string
+      frontend-result:
+        description: 'Frontend CI result'
+        required: false
+        type: string
+        default: 'skipped'
+      security-result:
+        description: 'Security scan result'
+        required: true
+        type: string
+      comment-pr:
+        description: 'Comment on PR with results'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  gate:
+    name: Quality Gate Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check results
+        id: check
+        run: |
+          echo "Backend: ${{ inputs.backend-result }}"
+          echo "Frontend: ${{ inputs.frontend-result }}"
+          echo "Security: ${{ inputs.security-result }}"
+
+          # Check if critical jobs passed
+          if [[ "${{ inputs.backend-result }}" != "success" ]]; then
+            echo "❌ Backend CI failed"
+            echo "status=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          if [[ "${{ inputs.security-result }}" != "success" ]]; then
+            echo "❌ Security scan failed"
+            echo "status=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          # Frontend is optional - warn if failed but don't block
+          if [[ "${{ inputs.frontend-result }}" == "failure" ]]; then
+            echo "⚠️  Frontend CI failed (non-blocking)"
+          fi
+
+          echo "✅ Quality gate passed!"
+          echo "status=success" >> $GITHUB_OUTPUT
+
+      - name: Generate summary
+        if: always()
+        run: |
+          echo "## Quality Gate Results 🎯" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+
+          # Backend
+          if [[ "${{ inputs.backend-result }}" == "success" ]]; then
+            echo "| Backend CI | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Backend CI | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Frontend
+          if [[ "${{ inputs.frontend-result }}" == "success" ]]; then
+            echo "| Frontend CI | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          elif [[ "${{ inputs.frontend-result }}" == "skipped" ]]; then
+            echo "| Frontend CI | ⏭️  Skipped |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Frontend CI | ⚠️  Failed (non-blocking) |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Security
+          if [[ "${{ inputs.security-result }}" == "success" ]]; then
+            echo "| Security Scan | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Security Scan | ❌ Failed |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ steps.check.outputs.status }}" == "success" ]]; then
+            echo "**Overall Status:** ✅ PASSED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**Overall Status:** ❌ FAILED" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Comment on PR
+        if: ${{ inputs.comment-pr && github.event_name == 'pull_request' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const backendIcon = '${{ inputs.backend-result }}' === 'success' ? '✅' : '❌';
+            const frontendIcon = '${{ inputs.frontend-result }}' === 'success' ? '✅' :
+                                '${{ inputs.frontend-result }}' === 'skipped' ? '⏭️' : '⚠️';
+            const securityIcon = '${{ inputs.security-result }}' === 'success' ? '✅' : '❌';
+            const overallIcon = '${{ steps.check.outputs.status }}' === 'success' ? '✅' : '❌';
+
+            const output = `## Quality Gate Results 🎯
+
+            | Check | Status |
+            |-------|--------|
+            | Backend CI | ${backendIcon} ${{ inputs.backend-result }} |
+            | Frontend CI | ${frontendIcon} ${{ inputs.frontend-result }} |
+            | Security Scan | ${securityIcon} ${{ inputs.security-result }} |
+
+            **Overall Status:** ${overallIcon} ${{ steps.check.outputs.status === 'success' ? 'PASSED' : 'FAILED' }}`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            });
